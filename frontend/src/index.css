@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  /* Add your custom theme variables here if needed */
+}
