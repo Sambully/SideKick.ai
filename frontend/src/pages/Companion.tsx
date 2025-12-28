@@ -12,11 +12,26 @@ const Companion = ({ params }: Companionprop) => {
     const [companion, setcompanion] = useState();
     const [categories, setcategories] = useState();
     useEffect(() => {
+        // const fetch = async () => {
+        //     const response = await axios.get(`http://localhost:3000/companion/${params.companionId}`);
+        //     const cato = await axios.get(`http://localhost:3000/categories`);
+        //     setcompanion(response.data);
+        //     setcategories(cato.data);
+        // }
+        // fetch();
         const fetch = async () => {
-            const response = await axios.get(`http://localhost:3000/companion/${params.companionId}`);
-            const cato = await axios.get(`http://localhost:3000/categories`);
-            setcompanion(response.data);
-            setcategories(cato.data);
+            try {
+                const cato = await axios.get('http://localhost:3000/categories');
+                setcategories(cato.data);
+            } catch (err) {
+                console.error("Error while fetching catogries : ", err);
+            }
+            try {
+                const response = await axios.get(`http://localhost:3000/companion/${params.companionId}`);
+                setcompanion(response.data);
+            } catch (err) {
+                console.error("Error while fetching companion : ", err);
+            }
         }
         fetch();
     }, []);

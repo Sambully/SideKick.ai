@@ -22,14 +22,14 @@ export const Searchbar = () => {
         };
         const url = qs.stringifyUrl({
             url: window.location.pathname,
-            query : result
+            query: result
         }, { skipEmptyString: true, skipNull: true });
         navigation(url);
 
 
-    }, [navigation , debounce , categoryId]);
-    return <div className="relative w-full min-w-md  max-w-md ">
+    }, [navigation, debounce, categoryId]);
+    return <div className="relative w-full  md:w-[450px] mx-2">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input type='text' onChange={onChange} value={value} placeholder="Search..." className="pl-8" />
     </div>
-}
+}   

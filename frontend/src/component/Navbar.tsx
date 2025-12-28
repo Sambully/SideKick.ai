@@ -7,9 +7,9 @@ import { Mobilesidebar } from "./Mobilesidebar"
 import { Searchbar } from "./searchbar"
 
 export const Navbar = () => {
-    return <div className="fixed w-full flex justify-between px-4 py-2 h-16 items-center border-b bg-secondary ">
+    return <div className="fixed z-50 w-full flex justify-between px-4 py-2 h-16 items-center border-b bg-secondary ">
         <div className="felx items-center" >
-            <Mobilesidebar/>
+            <Mobilesidebar />
             <Link to="/">
                 <h1 className="hidden md:block text-xl font-bold">
                     Sidekick.Ai
@@ -17,12 +17,12 @@ export const Navbar = () => {
             </Link>
         </div>
         <div className="flex justify-center">
-            <Searchbar/>
+            <Searchbar />
         </div>
         <div className="flex items-center gap-x-3">
             <Button variant="premium" size="sm">Upgrade <Sparkle className="fill-white h-4 w-4" /></Button>
-            <ModeToggle/>
-            <UserButton/>
+            <ModeToggle />
+            <UserButton />
         </div>
     </div>
 }
