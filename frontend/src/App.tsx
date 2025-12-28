@@ -5,6 +5,7 @@ import { Signuppage } from './pages/Signuppage'
 import { Dashboard } from './pages/Dashboard'
 import { ThemeProvider } from "./components/ui/ttheme-provider"
 import Companion from './pages/Companion'
+import { Toaster } from "./components/ui/sonner"
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
@@ -21,7 +22,9 @@ function App() {
         <Route path='/companion/new' element={<Companion />} />
 
 
+
       </Routes>
+      <Toaster />
 
     </ThemeProvider>
 

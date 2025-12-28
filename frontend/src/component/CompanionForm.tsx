@@ -6,11 +6,14 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Separator } from "@/components/ui/separator";
 import { ImageUpload } from "./Image-upload";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@clerk/clerk-react";
 import { Wand } from "lucide-react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 interface CompanionFormProps {
     initialData: Companion | null | undefined;
     categories: Category[] | null | undefined;
@@ -52,6 +55,7 @@ const CompanionFormSchema = z.object({
 })
 
 const CompanionForm = ({ initialData, categories }: CompanionFormProps) => {
+    const navigation = useNavigate();
     const form = useForm<z.infer<typeof CompanionFormSchema>>({
         resolver: zodResolver(CompanionFormSchema),
         defaultValues: initialData || {
@@ -64,17 +68,29 @@ const CompanionForm = ({ initialData, categories }: CompanionFormProps) => {
 
         }
     })
+    const { getToken } = useAuth();
 
     const isloading = form.formState.isSubmitting;
     const onsubmit = async (values: z.infer<typeof CompanionFormSchema>) => {
         try {
+            const token = await getToken();
+            const config = {
+                headers: { Authorization: `Bearer ${token}` }
+            };
             if (initialData) {
-                await axios.patch(`/api/companion/${initialData.id}`, values);
+                await axios.patch(`http://localhost:3000/companion/${initialData.id}`, values, config);
             } else {
-                await axios.post(`/api/companion`, values);
+                await axios.post(`http://localhost:3000/companion/new`, values, config);
             }
+            toast("Companion created successfully", {
+                description: "Success!"
+            })
+            navigation(0);
+            navigation("/dashboard");
         } catch (err) {
-            console.log(err, " error in form submission")
+            toast("Unauthorized user", {
+                description: "Please log in"
+            })
         }
     }
     return <div className="h-full p-4 space-y-2 max-w-3xl mx-auto">

@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import prismadb from "./db";
-import { ClerkExpressRequireAuth, StrictAuthProp } from "@clerk/clerk-sdk-node";
+import { ClerkExpressRequireAuth, StrictAuthProp, clerkClient } from "@clerk/clerk-sdk-node";
 
 const app = express();
 const PORT = 3000;
@@ -96,7 +96,7 @@ app.patch('/companion/:id', requiredAuth, async (req: Request, res: Response) =>
   }
 })
 
-app.delete('companion/:id', requiredAuth, async (req: Request, res: Response) => {
+app.delete('/companion/:id', requiredAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.auth.userId;
@@ -129,7 +129,7 @@ app.delete('companion/:id', requiredAuth, async (req: Request, res: Response) =>
 app.post('/companion/new', requiredAuth, async (req: Request, res: Response) => {
   try {
     const body = req.body;
-    const { src, name, description, username, instructions, seed, categoryId } = body;
+    const { src, name, description, instructions, seed, categoryId } = body;
     const userId = req.auth.userId;
     if (!userId) {
       return res.json({
@@ -141,6 +141,8 @@ app.post('/companion/new', requiredAuth, async (req: Request, res: Response) => 
         msg: "Missing fields"
       })
     }
+    const user = await clerkClient.users.getUser(userId);
+    const username = user.username || " User";
     const companion = await prismadb.companion.create({
       data: {
         categoryId,

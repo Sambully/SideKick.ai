@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navbar } from "../component/Navbar";
 import { Sidebar } from "../component/Sidebar";
+
 import axios from "axios";
 import Categories from "../component/Categories";
 
@@ -11,6 +12,7 @@ interface Category {
 
 export function Dashboard() {
     const [categories, setcategories] = useState<Category[]>([]);
+
     useEffect(() => {
         try {
             const fetchcat = async () => {
