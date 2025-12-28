@@ -52,7 +52,7 @@ app.get('/companion/:id', async (req: Request, res: Response) => {
   }
 })
 
-app.patch('/companion/:id', requiredAuth, async (req: Request, res: Response) => {
+app.patch(`/companion/:id`, requiredAuth, async (req: Request, res: Response) => {
   const { id } = req.params;
   const body = req.body;
   const userId = req.auth.userId;

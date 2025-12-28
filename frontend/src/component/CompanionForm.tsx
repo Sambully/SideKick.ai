@@ -14,6 +14,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { Wand } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 interface CompanionFormProps {
     initialData: Companion | null | undefined;
     categories: Category[] | null | undefined;
@@ -68,6 +69,11 @@ const CompanionForm = ({ initialData, categories }: CompanionFormProps) => {
 
         }
     })
+    useEffect(() => {
+        if (initialData) {
+            form.reset(initialData);
+        }
+    }, [initialData, form])
     const { getToken } = useAuth();
 
     const isloading = form.formState.isSubmitting;
@@ -82,11 +88,14 @@ const CompanionForm = ({ initialData, categories }: CompanionFormProps) => {
             } else {
                 await axios.post(`http://localhost:3000/companion/new`, values, config);
             }
-            toast("Companion created successfully", {
-                description: "Success!"
-            })
-            navigation(0);
-            navigation("/dashboard");
+            {
+                initialData ? toast("Sidekick Updated successfully", {
+                    description: "You can now talk to updated sidekick"
+                }) : toast("Sidekick created successfully", {
+                    description: "You can now talk to created sidekick"
+                })
+            }
+            navigation("/Dashboard");
         } catch (err) {
             toast("Unauthorized user", {
                 description: "Please log in"
