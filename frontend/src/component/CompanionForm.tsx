@@ -83,28 +83,29 @@ const CompanionForm = ({ initialData, categories }: CompanionFormProps) => {
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
-            if (initialData) {
+            if (initialData?.id) {
                 await axios.patch(`http://localhost:3000/companion/${initialData.id}`, values, config);
+                toast.success("Companion Updated Successfully");
             } else {
                 await axios.post(`http://localhost:3000/companion/new`, values, config);
-            }
-            {
-                initialData ? toast("Sidekick Updated successfully", {
-                    description: "You can now talk to updated sidekick"
-                }) : toast("Sidekick created successfully", {
-                    description: "You can now talk to created sidekick"
-                })
+                toast.success("Companion Created Successfully");
             }
             navigation("/Dashboard");
         } catch (err) {
+            console.error("Submit Error:", err);
             toast("Unauthorized user", {
                 description: "Please log in"
             })
         }
     }
+    const onInvalid = (error: any) => {
+        toast.error("Invalid form", {
+            description: error
+        })
+    }
     return <div className="h-full p-4 space-y-2 max-w-3xl mx-auto">
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onsubmit)} className="space-y-2 pb-10">
+            <form onSubmit={form.handleSubmit(onsubmit, onInvalid)} className="space-y-2 pb-10">
                 <div className="space-y-2 w-full ">
                     <div>
                         <h3 className="text-3xl font-medium">General Information</h3>

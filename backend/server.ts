@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import prismadb from "./db";
 import { ClerkExpressRequireAuth, StrictAuthProp, clerkClient } from "@clerk/clerk-sdk-node";
-
+import "dotenv/config"
 const app = express();
 const PORT = 3000;
 app.use(cors());
@@ -27,6 +27,40 @@ app.get("/categories", async (req: Request, res: Response) => {
     res.json({ msg: "Something went wrong" });
   }
 });
+
+app.get('/companions', async (req: Request, res: Response) => {
+  try {
+    const { categoryId, name } = req.query;
+    const companions = await prismadb.companion.findMany({
+      where: {
+        ...(categoryId ? { categoryId: String(categoryId) } : {}),
+
+        ...(name ? {
+          name: {
+            contains: String(name),
+            mode: "insensitive"
+          }
+        } : {})
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      include: {
+        _count: {
+          select: {
+            messages: true
+          }
+        }
+      }
+    })
+    res.json(companions)
+  } catch (err) {
+    console.log("Error fetching companoin : ", err),
+      res.json({
+        msg: "Something went wrong !!"
+      })
+  }
+})
 
 app.get('/companion/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -158,7 +192,8 @@ app.post('/companion/new', requiredAuth, async (req: Request, res: Response) => 
     return res.json(companion)
 
   } catch (err) {
-    return res.json({
+    console.log("[COMPANION_POST_ERROR]", err);
+    return res.status(500).json({
       mag: "Error while creating companion"
     })
   }
