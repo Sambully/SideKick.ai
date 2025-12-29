@@ -12,13 +12,24 @@ interface CompanionProps {
         username: string,
         _count: {
             messages: number
-        }
+        },
 
-    }[]
+    }[],
+    isLoading?: boolean
+
 }
 
 
-const Companions = ({ data }: CompanionProps) => {
+const Companions = ({ data, isLoading }: CompanionProps) => {
+    if (isLoading) {
+        return (
+            <div className="md:25 pt-10 flex flex-col items-center justify-center space-y-3">
+                <div className="relative flex flex-col items-center justify-center w-100 h-60">
+                    <h1 className="text-2xl text-gray-500 font-semibold">Loading...</h1>
+                </div>
+            </div>
+        )
+    }
     if (data.length == 0) {
         return (
             <div className="md:25 pt-10 flex flex-col items-center justify-center space-y-3">
@@ -35,7 +46,7 @@ const Companions = ({ data }: CompanionProps) => {
                     key={item.id}
                     className="group overflow-hidden rounded-2xl border-0 bg-secondary/10 shadow-sm transition-all hover:shadow-xl hover:bg-secondary/20"
                 >
-                    <Link to={`/companion/${item.id}`} className="block h-full">
+                    <Link to={`/chat/${item.id}`} className="block h-full">
                         <div className="relative w-full aspect-square overflow-hidden bg-secondary/20">
                             <img
                                 src={item.src}
