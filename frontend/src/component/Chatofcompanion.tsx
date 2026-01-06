@@ -33,8 +33,6 @@ interface Companion {
     };
 }
 
-
-
 const Chatofcompanion = ({ chatId }: chatparams) => {
     const navigation = useNavigate();
     const { isSignedIn, userId, isLoaded, getToken } = useAuth();
@@ -79,8 +77,8 @@ const Chatofcompanion = ({ chatId }: chatparams) => {
     if (!isLoaded || loadingchat) {
         return (
 
-            <div className="md:25 pt-10 flex flex-col items-center justify-center space-y-3">
-                <div className="relative flex flex-col items-center justify-center w-100 h-60">
+            <div className="md:25 pt-10 flex justify-center space-y-3">
+                <div className="flex flex-col items-center justify-center w-100 h-100">
                     <h1 className="text-2xl text-gray-500 font-semibold">Loading...</h1>
                 </div>
             </div>
@@ -97,7 +95,7 @@ const Chatofcompanion = ({ chatId }: chatparams) => {
         )
     }
     return (
-        <div className="w-full h-full max-w-4xl mx-auto min-w-md">
+        <div className="w-full h-full  mx-auto min-w-md">
             <Chatclient companion={companion} />
         </div>
     )

@@ -1,3 +1,5 @@
+import { ChatHeader } from "@/component/ChaHeader";
+
 interface Companion {
     id: string,
     userId: string,
@@ -21,10 +23,12 @@ interface Message {
     userId: string,
     companionId: string
 }
+
+
 export const Chatclient = ({ companion }: { companion: Companion | null }) => {
     return (
-        <div>
-            Hi there {companion?.id}
+        <div className="h-full w-full">
+            <ChatHeader companion={companion} />
         </div>
     )
 }
