@@ -199,6 +199,49 @@ app.post('/companion/new', requiredAuth, async (req: Request, res: Response) => 
   }
 })
 
+app.get('/chat/:chatId', requiredAuth, async (req: Request, res: Response) => {
+  const { chatId } = req.params;
+  if (!chatId) {
+    return res.json({
+      msg: "Chat id is required"
+    })
+  }
+  try {
+    const chating = await prismadb.companion.findUnique({
+      where: {
+        id: chatId
+      },
+      include: {
+        messages
+          : {
+          orderBy: {
+            createdAt: "asc"
+          },
+          where: {
+            userId: req.auth.userId
+          }
+        },
+        _count: {
+          select: {
+            messages: true
+          }
+        }
+      }
+    });
+    if (!chating) {
+      return res.json({
+        msg: "No chat found"
+      })
+    }
+    return res.json(chating)
+  } catch (err) {
+    console.log("[CHAT_GET_ERROR]", err);
+    return res.status(500).json({
+      msg: "Error while fetching chat"
+    })
+  }
+})
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

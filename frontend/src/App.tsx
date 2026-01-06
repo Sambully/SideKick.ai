@@ -6,10 +6,17 @@ import { Dashboard } from './pages/Dashboard'
 import { ThemeProvider } from "./components/ui/ttheme-provider"
 import Companion from './pages/Companion'
 import { Toaster } from "./components/ui/sonner"
+import Chat from './pages/Chat'
+import Chatofcompanion from './component/Chatofcompanion'
 const Campaignpage = () => {
   const params = useParams();
   return <Companion params={{ companionId: params.companionId || "new" }} />;
 }
+const Companionchatparams = () => {
+  const params = useParams();
+  return <Chatofcompanion chatId={params.chatId || null} />
+}
+
 function App() {
 
   return (
@@ -25,6 +32,7 @@ function App() {
 
         <Route path='/Dashboard' element={<Dashboard />} />
         <Route path='/companion/:companionId' element={<Campaignpage />} />
+        <Route path='/chat/:chatId' element={<Companionchatparams />} />
 
 
 
