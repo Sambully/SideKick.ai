@@ -3,35 +3,13 @@ import { useAuth, useUser } from "@clerk/clerk-react";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { Companion, Message } from "@/component/types/types";
 
 interface chatparams {
     chatId: string | null
 }
 
-interface Message {
-    id: string,
-    role: "User" | "system",
-    content: string,
-    createdAt: string
-    userId: string,
-    companionId: string
-}
 
-interface Companion {
-    id: string,
-    userId: string,
-    username: string,
-    src: string,
-    name: string,
-    description: string,
-    instructions: string,
-    seed: string,
-    categoryId: string,
-    messages: Message[];
-    _count: {
-        messages: number;
-    };
-}
 
 const Chatofcompanion = ({ chatId }: chatparams) => {
     const navigation = useNavigate();

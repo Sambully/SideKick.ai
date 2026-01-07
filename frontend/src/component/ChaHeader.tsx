@@ -6,30 +6,10 @@ import { useUser, useAuth } from "@clerk/clerk-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import axios from "axios";
+import type { Companion, Message } from "./types/types";
 
-interface Companion {
-    id: string,
-    userId: string,
-    username: string,
-    src: string,
-    name: string,
-    description: string,
-    instructions: string,
-    seed: string,
-    categoryId: string,
-    messages: Message[];
-    _count: {
-        messages: number;
-    };
-}
-interface Message {
-    id: string,
-    role: "User" | "system",
-    content: string,
-    createdAt: string
-    userId: string,
-    companionId: string
-}
+
+
 
 export const ChatHeader = ({ companion }: { companion: Companion | null }) => {
     const navigation = useNavigate();
@@ -55,7 +35,7 @@ export const ChatHeader = ({ companion }: { companion: Companion | null }) => {
         }
     }
     return (
-        <div className="border-b flex justify-between w-full border-primary/25 p-4">
+        <div className="border-b flex justify-between w-full border-primary/15 p-4">
             <div className="gap-x-2 items-center font-bold">
                 <Button size="icon" variant="ghost" onClick={() => navigation("/dashboard")}>
                     <ChevronLeft className="h-24 w-24 stroke-[4]" />

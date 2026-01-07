@@ -41,7 +41,7 @@ const Companions = ({ data, isLoading }: CompanionProps) => {
     }
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-10 pt-4 px-4 md:px-6 md:pl-24">
-            {data.map((item) => (
+            {data?.map((item) => (
                 <Card
                     key={item.id}
                     className="group overflow-hidden rounded-2xl border-0 bg-secondary/10 shadow-sm transition-all hover:shadow-xl hover:bg-secondary/20"
