@@ -15,7 +15,7 @@ export const ChatMessages = ({ companion, messages = [], isLoading }: ChatMessag
                     key={message.content}
                     role={message.role}
                     content={message.content}
-                    src={message.src}
+                    src={companion?.src}
 
                 />
             )) : <div className="md:25 pt-10 flex flex-col items-center justify-center space-y-3">
