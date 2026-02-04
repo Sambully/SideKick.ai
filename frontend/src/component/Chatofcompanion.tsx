@@ -72,6 +72,9 @@ const Chatofcompanion = ({ chatId }: chatparams) => {
             </div>
         )
     }
+    if (!companion && !loadingchat) {
+        return <div>Companion not found</div>;
+    }
     return (
         <div className="w-full h-full  mx-auto min-w-md">
             <Chatclient companion={companion} />

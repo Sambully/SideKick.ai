@@ -1,0 +1,21 @@
+
+const fetch = require('node-fetch');
+
+async function testStream() {
+    const chatId = "e2f5893d-f7f0-457e-ade4-cd82f548db4c"; // Use the chat ID from user logs
+    // We need a valid token. Since I can't easily get one, I might need the user to provide one or I'll try to simulate without if possible, 
+    // but the endpoint requires auth. 
+    // Actually, I can't easily run this without a valid Bearer token which changes.
+    // I will try to use the token from the user's logs if it's still valid, otherwise this script might fail 401.
+    // The logs show a token: "Bearer eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zNmpFc0Nma0o0Z1lqdW9wU3k4eFdkbjBUWHIiLCJ0eXAiOiJKV1QifQ..."
+    // I'll assume the user might need to update it or I'll try the one from the log.
+    
+    // Actually, asking the user to run a curl command to test timing might be easier and more reliable than a node script with stale tokens.
+    // But I'll write this script with a placeholder and ask the user to run the curl command if this fails.
+    
+    console.log("This script requires a valid bearer token. If it fails 401, that is why.");
+    console.log("Starting stream test...");
+    
+    // I will not use this script primarily properly because of Auth. 
+    // Instead I will focus on the frontend component first.
+}

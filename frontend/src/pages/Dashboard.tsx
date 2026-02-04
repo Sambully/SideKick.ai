@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
 import { Navbar } from "../component/Navbar";
 import { Sidebar } from "../component/Sidebar";
 
@@ -17,6 +18,7 @@ export function Dashboard() {
     const [categories, setcategories] = useState<Category[]>([]);
     const [companoins, setcompanions] = useState([]);
     const [search] = useSearchParams();
+    const { getToken } = useAuth();
 
     useEffect(() => {
         try {
@@ -37,10 +39,15 @@ export function Dashboard() {
                 setLoading(true);
                 const categoryId = search.get("categoryId");
                 const name = search.get("name");
+                const token = await getToken();
+
                 const response = await axios.get("http://localhost:3000/companions", {
                     params: {
                         categoryId: categoryId || undefined,
                         name: name || undefined
+                    },
+                    headers: {
+                        "Authorization": `Bearer ${token}`
                     }
                 });
                 setcompanions(response.data);

@@ -36,7 +36,7 @@ const Categories = ({ data }: { data: Category[] }) => {
                 transaction
                 ${categoryId === null ? 'bg-primary/30' : 'bg-primary/10'}
                 ` } onClick={() => navigation("/Dashboard")} >Latest</button>
-            {data.map((cat) => (
+            {Array.isArray(data) && data.map((cat) => (
                 <button key={cat.id} className={`
                 flex
                 text-center

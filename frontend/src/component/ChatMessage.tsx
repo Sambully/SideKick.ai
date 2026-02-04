@@ -5,7 +5,7 @@ import { Uservatar } from "./Uservatar";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 export interface ChatMessageprops {
-    role: "user" | "system", 
+    role: "user" | "system",
     content?: string,
     isLoading?: boolean,
     src?: string
@@ -22,8 +22,8 @@ export const ChatMessage = ({ role, content, isLoading, src }: ChatMessageprops)
     }
     return <div className={`group flex items-start m-3 gap-x-4 ${role === "user" && "justify-end"}`}>
         {role === "system" && src && <img src={src} alt="avatar" className="h-8 w-8 rounded-full" />}
-        <div className="rounded-md px-4 py-2 max-w-sm text-md bg-primary/10">
-            {isLoading ? <BeatLoader color={theme === "Light" || "light" ? "black" : "white"} /> : content}
+        <div className="rounded-md px-4 py-2 max-w-sm text-md bg-primary/10 whitespace-pre-wrap">
+            {isLoading && !content ? <BeatLoader color={theme === "light" ? "black" : "white"} /> : content}
         </div>
         {role === "user" && <Uservatar />}
         {role === "system" && !isLoading && (

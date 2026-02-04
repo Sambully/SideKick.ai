@@ -1,8 +1,17 @@
 import express, { Request, Response } from "express";
+import "dotenv/config";
+import { LangChainStream } from "./stream-utils";
+import { CallbackManager } from "@langchain/core/callbacks/manager";
+import { Replicate } from "@langchain/community/llms/replicate"
+import { ratelimit } from "./rate-limit";
+import { MemoryManager } from "./memory";
+
+
+
 import cors from "cors";
 import prismadb from "./db";
-import { ClerkExpressRequireAuth, StrictAuthProp, clerkClient } from "@clerk/clerk-sdk-node";
-import "dotenv/config"
+import { ClerkExpressWithAuth, StrictAuthProp, clerkClient } from "@clerk/clerk-sdk-node";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 const app = express();
 const PORT = 3000;
 app.use(cors());
@@ -11,8 +20,17 @@ declare global {
     interface Request extends StrictAuthProp { }
   }
 }
+//
+app.use((req, res, next) => {
+  console.log("--- INCOMING REQUEST ---");
+  console.log("Method:", req.method);
+  console.log("URL:", req.url);
+  console.log("Auth Header:", req.headers.authorization);
+  next();
+});
+//
 app.use(express.json());
-const requiredAuth = ClerkExpressRequireAuth({});
+const requiredAuth = ClerkExpressWithAuth({});
 
 app.get("/", (req: Request, res: Response) => {
   res.json({ msg: "API is running!" });
@@ -24,15 +42,22 @@ app.get("/categories", async (req: Request, res: Response) => {
     res.json(categories);
   } catch (error) {
     console.error("Error fetching categories:", error);
-    res.json({ msg: "Something went wrong" });
+    res.status(500).json({ msg: "Something went wrong" });
   }
 });
 
-app.get('/companions', async (req: Request, res: Response) => {
+app.get('/companions', requiredAuth, async (req: Request, res: Response) => {
   try {
     const { categoryId, name } = req.query;
+    const userId = req.auth.userId;
+
+    if (!userId) {
+      return res.status(401).json({ msg: "Unauthorized" });
+    }
+
     const companions = await prismadb.companion.findMany({
       where: {
+        userId: userId,
         ...(categoryId ? { categoryId: String(categoryId) } : {}),
 
         ...(name ? {
@@ -56,14 +81,14 @@ app.get('/companions', async (req: Request, res: Response) => {
     res.json(companions)
   } catch (err) {
     console.log("Error fetching companoin : ", err),
-      res.json({
+      res.status(500).json({
         msg: "Something went wrong !!"
       })
   }
 })
 
 app.get('/companion/:id', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   if (!id) {
     return res.json({
       mag: "Companion id is required"
@@ -87,7 +112,7 @@ app.get('/companion/:id', async (req: Request, res: Response) => {
 })
 
 app.patch(`/companion/:id`, requiredAuth, async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const body = req.body;
   const userId = req.auth.userId;
   if (!userId) {
@@ -132,7 +157,7 @@ app.patch(`/companion/:id`, requiredAuth, async (req: Request, res: Response) =>
 
 app.delete('/companion/:id', requiredAuth, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const userId = req.auth.userId;
     if (!userId) {
       return res.json({
@@ -200,7 +225,7 @@ app.post('/companion/new', requiredAuth, async (req: Request, res: Response) => 
 })
 
 app.get('/chat/:chatId', requiredAuth, async (req: Request, res: Response) => {
-  const { chatId } = req.params;
+  const { chatId } = req.params as { chatId: string };
   if (!chatId) {
     return res.json({
       msg: "Chat id is required"
@@ -242,6 +267,225 @@ app.get('/chat/:chatId', requiredAuth, async (req: Request, res: Response) => {
   }
 })
 
+app.post("/api/chat/:chatId", requiredAuth, async (req: Request, res: Response) => {
+  try {
+    const { chatId } = req.params as { chatId: string };
+    const prompt = req.body.prompt;
+    const userId = req.auth.userId;
+    if (!userId) {
+      return res.status(404).json({
+        msg: "Unauthorized user"
+      })
+    }
+    const identifier = req.url + "-" + userId;
+    const { success } = await ratelimit(identifier);
+    if (!success) {
+      return res.status(404).json({
+        msg: "rate limit exceed"
+      });
+    }
+    const companion = await prismadb.companion.findUnique({
+      where: {
+        id: chatId || ""
+      },
+      include: {
+        messages: true
+      }
+    });
+    if (!companion) {
+      return res.status(404).json({
+        msg: "No companion found"
+      });
+    }
+
+    await prismadb.companion.update({
+      where: { id: chatId || "" },
+      data: {
+        messages: {
+          create: {
+            content: prompt,
+            userId: userId,
+            role: "user"
+          }
+        }
+      }
+    });
+
+
+    const name = companion.name;
+    const companion_file_name = name + ".txt";
+    const companionKey = {
+      companion: name,
+      userId: userId,
+      modelname: "llama2-13b"
+    }
+    const memoryManager = await MemoryManager.getInstance();
+    const records = await memoryManager.readhistory(companionKey);
+    if (records.length === 0) {
+      await memoryManager.seedChathistory(companion.seed, "\n\n", companionKey);
+    }
+    await memoryManager.writeToHistory("User: " + prompt + "\n", companionKey);
+    const recentChatHistory = await memoryManager.readhistory(companionKey);
+    ////////////////////////////////////////
+    // GEMINI WORK
+
+    console.log("Preparing Gemini request...");
+    const genAi = new GoogleGenerativeAI("AIzaSyB7TaufaR4ySmIWqfg9SgqpzJbYu9rb8Zs");
+    const model = genAi.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const final_prompt = `
+      You are ${name}, created by ${companion.username}.
+      
+      YOUR INSTRUCTIONS:
+      ${companion.instructions}
+
+      CONTEXT FROM MEMORY:
+      ${recentChatHistory}
+
+      User: ${prompt}
+      ${name}:
+    `;
+
+    console.log("Sending prompt to Gemini...", final_prompt.substring(0, 50) + "...");
+
+    res.writeHead(200, {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
+    if (typeof (res as any).flushHeaders === 'function') {
+      (res as any).flushHeaders();
+    }
+
+    try {
+
+
+
+      const result = await model.generateContentStream(final_prompt);
+      console.log("Stream started");
+
+      let fullResponse = "";
+
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        if (!chunkText) continue;
+
+        fullResponse += chunkText;
+        res.write(chunkText);
+
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+
+
+      console.log("Stream finished. Full response length:", fullResponse.length);
+
+      if (fullResponse.length > 0) {
+        const cleanResponse = fullResponse.trim();
+        await memoryManager.writeToHistory(cleanResponse, companionKey);
+        await prismadb.companion.update({
+          where: { id: chatId || "" },
+          data: {
+            messages: {
+              create: {
+                content: cleanResponse,
+                userId: userId,
+                role: "system"
+              }
+            }
+          }
+        });
+      }
+    } catch (apiError: any) {
+      console.error("Gemini API Error:", apiError);
+      if (!res.headersSent) {
+        res.status(500).json({ msg: "AI generation failed" });
+      } else {
+        res.write(`\n[Error: ${apiError.message}]`);
+      }
+    } finally {
+      res.end();
+    }
+
+
+
+    ////////////////////////////////////////
+    ////////////////////////////////////////
+    // const similardocs = await memoryManager.vectorsearch(recentChatHistory, companion_file_name);
+    // let releventhistory = "";
+    // if (similardocs && similardocs.length > 0) {
+    //   releventhistory = similardocs.map((doc: any) => doc.pageContent).join("\n")
+    // }
+    // const { handlers, stream } = LangChainStream();
+    // const model = new Replicate({
+    //   model: "meta/llama-2-13b-chat:f4e2de70d66816a838a89eeeb621910adffb0dd0baba3976c96980970978018d",
+    //   apiKey: process.env.REPLICATE_API_KEY || "",
+    //   input: { max_length: 2048 },
+    //   callbacks: CallbackManager.fromHandlers(handlers)
+    // });
+    // console.log("Replicate: Invoking model...");
+    // // @ts-ignore
+    // model.invoke(`Only generate plain sentences without prefix of who is speaking. DO NOT USE ${name}: prefix. 
+    //         ${companion.instructions}
+
+    //         Below are relevant details of ${name}'s past and the conversation you are in:
+    //         ${releventhistory}
+
+    //         ${recentChatHistory}
+    //         ${name}:`).then(() => console.log("Replicate: Invocation complete"))
+    //   .catch((err) => console.error("Replicate: Error during invocation:", err));
+
+    // res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    // res.setHeader('Transfer-Encoding', 'chunked');
+    // const reader = stream.getReader();
+    // let fullResponse = "";
+    // try {
+    //   while (true) {
+    //     const { done, value } = await reader.read();
+    //     if (done) break;
+    //     const chunck = new TextDecoder().decode(value);
+    //     console.log("Server: Chunk received from stream:", chunck);
+    //     fullResponse += chunck;
+    //     await res.write(chunck);
+    //   }
+    // } catch (streamError: any) {
+    //   console.error("Server: Error reading stream:", streamError);
+    //   // Attempt to send the error message to the client
+    //   const errorMessage = `\n\n[Error: ${streamError.message || "Failed to generate response"}]`;
+    //   await res.write(errorMessage);
+    //   fullResponse += errorMessage;
+    // }
+    // console.log("Server: Response fully sent (Length: " + fullResponse.length + ")");
+
+
+    // if (fullResponse.length > 0) {
+    //   await memoryManager.writeToHistory(fullResponse.trim(), companionKey);
+    //   await prismadb.companion.update({
+    //     where: { id: chatId || "" },
+    //     data: {
+    //       messages: {
+    //         create: {
+    //           content: fullResponse.trim(),
+    //           userId: userId,
+    //           role: "system"
+    //         }
+    //       }
+    //     }
+    //   });
+    // }
+    // res.end();
+
+  } catch (err) {
+    console.log(err)
+  }
+
+
+})
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-});
+}); 
