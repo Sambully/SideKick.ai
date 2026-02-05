@@ -10,6 +10,7 @@ import Chat from './pages/Chat'
 import Chatofcompanion from './component/Chatofcompanion'
 import { Settings } from './pages/Settings'
 import { SubscriptionContent } from './component/SubscriptionModal'
+import LandingPage from './pages/LandingPage'
 
 const Campaignpage = () => {
   const params = useParams();
@@ -38,7 +39,7 @@ function App() {
         <Route path='/chat/:chatId' element={<Companionchatparams />} />
         <Route path='/settings' element={<Settings />} />
         <Route path='/subscription' element={<SubscriptionContent />} />
-
+        <Route path="/" element={<LandingPage />} />
 
 
       </Routes>
