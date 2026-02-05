@@ -570,6 +570,40 @@ app.post("/api/subscription/verify", requiredAuth, async (req: Request, res: Res
 })
 
 
+app.get("/api/settings", requiredAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth.userId;
+    if (!userId) return res.json({
+      msg: "User is not authorized"
+    })
+    const subscription = await prismadb.usersubscription.findUnique({
+      where: { userId: userId },
+      select: {
+        maxCompanions: true,
+        razorpayCustomerId: true,
+        razorpayCurrentPeriodEnd: true,
+        razorpayPlanId: true
+      }
+    })
+    const count = await prismadb.companion.count({
+      where: { userId: userId }
+    })
+    const DAY_IN_MS = 86_400_000;
+    const isPro = !!subscription?.razorpayCurrentPeriodEnd && (subscription.razorpayCurrentPeriodEnd.getTime() + DAY_IN_MS > Date.now());
+    return res.json({
+      isPro,
+      planName: isPro ? subscription?.razorpayPlanId : "Free",
+      limit: isPro ? subscription?.maxCompanions : 2,
+      count: count
+    })
+  } catch (err) {
+    console.log(err);
+    return res.json({
+      msg: "Error in fetching  subscrition details in settings"
+    })
+  }
+})
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 }); 

@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Check, Zap } from "lucide-react";
+import { Check, ChevronLeft, Zap } from "lucide-react";
 import { useState } from "react";
 import axios from "axios";
-import { useAuth, useUser } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/clerk-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useNavigate } from "react-router-dom";
 
 
 interface SubscriptionModelinterface {
@@ -15,14 +16,16 @@ interface SubscriptionModelinterface {
 const Plans = [
     { name: "Pro", price: 10, limit: "+2 companions", desc: "For getting started" },
     { name: "Elite", price: 20, limit: "+5 companions", desc: "For Power users", recommended: true },
-    { name: "Alpha", price: 25, limit: "+10 companions", desc: "For Ultimate users" }
+    { name: "Alpha", price: 30, limit: "+10 companions", desc: "For Ultimate users" }
 ];
 
 
-export function SubscriptionModal({ isOpen, isClosed }: SubscriptionModelinterface) {
+
+export const SubscriptionContent = ({ isModal = false }: { isModal?: boolean }) => {
     const [loading, setloading] = useState(false);
     const { getToken } = useAuth();
-    const { user } = useUser();
+
+    const navigation = useNavigate();
 
     const onSubscribe = async (plan: typeof Plans[0]) => {
         try {
@@ -69,6 +72,47 @@ export function SubscriptionModal({ isOpen, isClosed }: SubscriptionModelinterfa
 
     }
 
+    return (<div className="flex flex-col h-full w-full">
+        {!isModal && (
+            <div className="sticky top-0 z-50 w-full flex justify-between px-4 py-2 h-16 items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <div className="flex items-center" >
+                    <Button size="icon" variant="ghost" className="mr-4" onClick={() => {
+                        navigation("/dashboard")
+                    }}>
+                        <ChevronLeft className="h-6 w-6" />
+                    </Button>
+                </div>
+                <div className="flex text-center justify-center flex-1 mr-12">
+                    <h1 className="text-xl md:text-2xl font-bold">Upgrade your plan</h1>
+                </div>
+            </div>
+        )}
+        <div className="container mx-auto px-4 py-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+                {Plans.map((plan) => (
+                    <div key={plan.name} className={`p-6 border rounded-xl flex flex-col justify-between ${plan.recommended ? 'border-indigo-500 bg-indigo-50/10 shadow-lg relative' : 'bg-card'}`}>
+                        {plan.recommended && <div className="absolute -top-3 left-0 right-0 mx-auto w-fit px-3 py-1 bg-indigo-500 text-white text-xs rounded-full">Recommended</div>}
+                        <div>
+                            <h3 className="font-bold text-xl">{plan.name}</h3>
+                            <div className="text-3xl font-bold mt-2">₹{plan.price}</div>
+                            <p className="text-muted-foreground text-sm mt-1">{plan.desc}</p>
+                            <div className="mt-4 flex items-center gap-2">
+                                <Check className="w-4 h-4 text-green-500" />
+                                <span className="text-sm font-medium">{plan.limit}</span>
+                            </div>
+                        </div>
+                        <Button disabled={loading} onClick={() => onSubscribe(plan)} className="w-full mt-6" variant={plan.recommended ? "default" : "outline"}>
+                            Purchase
+                            <Zap className="w-4 h-4 ml-2 fill-current" />
+                        </Button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>)
+}
+
+export function SubscriptionModal({ isOpen, isClosed }: SubscriptionModelinterface) {
     return (
         <div>
             <Dialog open={isOpen} onOpenChange={isClosed}>
@@ -77,26 +121,7 @@ export function SubscriptionModal({ isOpen, isClosed }: SubscriptionModelinterfa
                         <DialogTitle className="text-center text-2xl">Upgrade your plan</DialogTitle>
                         <DialogDescription className="text-center">Choose a plan to upgrade your plan</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                        {Plans.map((plan) => (
-                            <div key={plan.name} className={`p-6 border rounded-xl flex flex-col justify-between ${plan.recommended ? 'border-indigo-500 bg-indigo-50/10 shadow-lg relative' : 'bg-card'}`}>
-                                {plan.recommended && <div className="absolute -top-3 left-0 right-0 mx-auto w-fit px-3 py-1 bg-indigo-500 text-white text-xs rounded-full">Recommended</div>}
-                                <div>
-                                    <h3 className="font-bold text-xl">{plan.name}</h3>
-                                    <div className="text-3xl font-bold mt-2">₹{plan.price}</div>
-                                    <p className="text-muted-foreground text-sm mt-1">{plan.desc}</p>
-                                    <div className="mt-4 flex items-center gap-2">
-                                        <Check className="w-4 h-4 text-green-500" />
-                                        <span className="text-sm font-medium">{plan.limit}</span>
-                                    </div>
-                                </div>
-                                <Button disabled={loading} onClick={() => onSubscribe(plan)} className="w-full mt-6" variant={plan.recommended ? "default" : "outline"}>
-                                    Purchase
-                                    <Zap className="w-4 h-4 ml-2 fill-current" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
+                    <SubscriptionContent isModal={true} />
                 </DialogContent>
             </Dialog>
         </div>

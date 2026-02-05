@@ -1,12 +1,13 @@
 import { UserButton } from "@clerk/clerk-react"
 import { Sparkle } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Button } from "../components/ui/button"
 import { ModeToggle } from "../components/ui/theme-toggle"
 import { Mobilesidebar } from "./Mobilesidebar"
 import { Searchbar } from "./searchbar"
 
 export const Navbar = () => {
+    const navigation = useNavigate();
     return <div className="fixed z-50 w-full flex justify-between px-4 py-2 h-16 items-center border-b bg-secondary ">
         <div className="felx items-center" >
             <Mobilesidebar />
@@ -20,7 +21,9 @@ export const Navbar = () => {
             <Searchbar />
         </div>
         <div className="flex items-center gap-x-3">
-            <Button variant="premium" size="sm">Upgrade <Sparkle className="fill-white h-4 w-4" /></Button>
+            <Button variant="premium" size="sm" onClick={() => {
+                navigation("/subscription");
+            }}>Upgrade <Sparkle className="fill-white h-4 w-4" /></Button>
             <ModeToggle />
             <UserButton />
         </div>
