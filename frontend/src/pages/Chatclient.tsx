@@ -14,40 +14,20 @@ export const Chatclient = ({ companion }: { companion: Companion | null }) => {
     const navigation = useNavigate();
     const [messages, setmessages] = useState<Message[]>(companion?.messages || []);
     const { getToken } = useAuth();
-    const { input, handleInputChange, handleSubmit, isLoading, setInput, complete, completion } = useCompletion({
-        api: `http://localhost:3000/api/chat/${companion?.id}`,
-        headers: async () => {
-            const token = await getToken();
-            return {
-                Authorization: `Bearer ${token}`
-            }
-        },
-        onFinish(prompt, response) {
-            const systemMessage: Message = {
-                role: "system",
-                content: response,
-                createdAt: new Date().toISOString(),
-                id: Date.now().toString(),
-                userId: "",
-                companionId: companion?.id || ""
-            };
+    const [isLoading, setIsLoading] = useState(false);
+    const [input, setInput] = useState("");
+    const [completion, setCompletion] = useState("");
 
-            setmessages((prev) => [...prev, systemMessage]);
-            setInput("");
-        }
-    });
-
+    const handleInputChange = (e: any) => {
+        setInput(e.target.value);
+    }
 
     const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!input.trim()) return;
 
         const token = await getToken();
-        console.log("Debug: Token retrieved:", token ? "Yes (length " + token.length + ")" : "No");
-
-        if (!token) {
-            console.error("No token found - user might be logged out");
-            return;
-        }
+        if (!token) return;
 
         const userMessage: Message = {
             role: "user",
@@ -59,16 +39,55 @@ export const Chatclient = ({ companion }: { companion: Companion | null }) => {
         }
         setmessages((prev) => [...prev, userMessage]);
 
-        // 3. Send Request
-        // handleSubmit(e); // Doesn't support dynamic headers easily in this version
-        complete(input, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
+        setIsLoading(true);
+        setCompletion("");
+        const currentInput = input;
+        setInput(""); // Clear input immediately
 
-        // 4. DELETE THIS LINE: setInput(""); 
-        // (Let onFinish handle clearing, otherwise you send an empty body!)
+        try {
+            const response = await fetch(`http://localhost:3000/api/chat/${companion?.id}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ prompt: currentInput })
+            });
+
+            if (!response.body) return;
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let accumulatedResponse = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                accumulatedResponse += chunk;
+                setCompletion((prev) => prev + chunk);
+            }
+
+            // Stream finished
+            const systemMessage: Message = {
+                role: "system",
+                content: accumulatedResponse,
+                createdAt: new Date().toISOString(),
+                id: Date.now().toString(),
+                userId: "",
+                companionId: companion?.id || ""
+            };
+
+            setmessages((prev) => [...prev, systemMessage]);
+            setCompletion(""); // Clear streaming buffer
+
+        } catch (error) {
+            console.error("Streaming error:", error);
+            // Optional: fallback toast
+        } finally {
+            setIsLoading(false);
+        }
     }
 
 

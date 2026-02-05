@@ -373,36 +373,54 @@ app.post("/api/chat/:chatId", requiredAuth, async (req: Request, res: Response) 
     res.writeHead(200, {
       'Content-Type': 'text/plain; charset=utf-8',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
+      'Connection': 'keep-alive',
+      'X-Content-Type-Options': 'nosniff'
     });
 
+    // Flush headers immediately
     if (typeof (res as any).flushHeaders === 'function') {
       (res as any).flushHeaders();
     }
 
     try {
-
-
-
       const result = await model.generateContentStream(final_prompt);
       console.log("Stream started");
 
       let fullResponse = "";
 
-      for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        if (!chunkText) continue;
+      // Create a readable stream from Gemini's async iterable
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of result.stream) {
+              const chunkText = chunk.text();
+              if (chunkText) {
+                fullResponse += chunkText;
+                controller.enqueue(new TextEncoder().encode(chunkText));
+              }
+            }
+            controller.close();
+          } catch (e) {
+            controller.error(e);
+          }
+        }
+      });
 
-        fullResponse += chunkText;
-        res.write(chunkText);
+      // Handle the stream reading manually to ensure DB updates run after
+      const reader = stream.getReader();
 
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // Write chunk to response
+        res.write(value);
+
+        // Flush if possible
         if (typeof (res as any).flush === 'function') {
           (res as any).flush();
         }
-
-        await new Promise(resolve => setTimeout(resolve, 10));
       }
-
 
       console.log("Stream finished. Full response length:", fullResponse.length);
 
