@@ -49,3 +49,15 @@ model Message {
 
   @@index([companionId])
 }
+
+model Usersubscription {
+  id                       String    @id @default(uuid())
+  userId                   String    @unique
+  razorpayCustomerId       String?   @unique @map(name: "razorpay_customer_id")
+  razorpaySubscriptionId   String?   @unique @map(name: "razorpay_subscription_id")
+  razorpayPlanId           String?   @map(name: "razorpay_plan_id")
+  razorpayCurrentPeriodEnd DateTime? @map(name: "razorpay_current_period_end")
+  maxCompanions            Int       @default(2)
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+}

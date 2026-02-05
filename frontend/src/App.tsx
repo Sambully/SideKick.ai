@@ -8,6 +8,7 @@ import Companion from './pages/Companion'
 import { Toaster } from "./components/ui/sonner"
 import Chat from './pages/Chat'
 import Chatofcompanion from './component/Chatofcompanion'
+import { Settings } from './pages/Settings'
 const Campaignpage = () => {
   const params = useParams();
   return <Companion params={{ companionId: params.companionId || "new" }} />;
@@ -33,6 +34,7 @@ function App() {
         <Route path='/Dashboard' element={<Dashboard />} />
         <Route path='/companion/:companionId' element={<Campaignpage />} />
         <Route path='/chat/:chatId' element={<Companionchatparams />} />
+        <Route path='/settings' element={<Settings />} />
 
 
 

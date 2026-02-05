@@ -1,17 +1,20 @@
 import express, { Request, Response } from "express";
 import "dotenv/config";
+import crypto from "crypto";
 import { LangChainStream } from "./stream-utils";
 import { CallbackManager } from "@langchain/core/callbacks/manager";
 import { Replicate } from "@langchain/community/llms/replicate"
 import { ratelimit } from "./rate-limit";
 import { MemoryManager } from "./memory";
-
+import { razorpay } from "./subscriptions-part/razorpay";
 
 
 import cors from "cors";
 import prismadb from "./db";
 import { ClerkExpressWithAuth, StrictAuthProp, clerkClient } from "@clerk/clerk-sdk-node";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { companionList } from "./subscriptions-part/subscription";
+import { rmSync } from "fs";
 const app = express();
 const PORT = 3000;
 app.use(cors());
@@ -195,6 +198,15 @@ app.post('/companion/new', requiredAuth, async (req: Request, res: Response) => 
         msg: "Unauthorized"
       })
     }
+    const count = await prismadb.companion.count({
+      where: { userId: userId }
+    })
+    const limit = await companionList(userId);
+    if (count >= limit) {
+      return res.json({
+        msg: "Limit exceeded"
+      })
+    }
     if (!src || !name || !description || !instructions || !seed || !categoryId) {
       return res.json({
         msg: "Missing fields"
@@ -277,6 +289,7 @@ app.post("/api/chat/:chatId", requiredAuth, async (req: Request, res: Response) 
         msg: "Unauthorized user"
       })
     }
+
     const identifier = req.url + "-" + userId;
     const { success } = await ratelimit(identifier);
     if (!success) {
@@ -485,6 +498,77 @@ app.post("/api/chat/:chatId", requiredAuth, async (req: Request, res: Response) 
 
 
 })
+
+app.post("/api/subscription/checkout", requiredAuth, async (req: Request, res: Response) => {
+  const { planName, amount, newLimit } = req.body;
+  const userId = req.auth.userId;
+  const options = {
+    amount: amount * 100,
+    currency: "INR",
+    receipt: `reciept_${userId}_${Date.now()}`,
+    notes: {
+      planName,
+      userId,
+      newLimit: String(newLimit)
+    }
+  }
+
+  try {
+    const order = await razorpay.orders.create(options);
+    res.json(order);
+  } catch (err) {
+    console.log(err);
+  }
+
+})
+
+
+app.post("/api/subscription/verify", requiredAuth, async (req: Request, res: Response) => {
+  const { razorpay_order_id, razorpay_subscription_id, razorpay_signature, planName } = req.body;
+  const userId = req.auth.userId;
+
+  if (!userId) {
+    return res.status(401).json({ msg: "Unauthorized" });
+  }
+
+  const body = razorpay_order_id + "|" + razorpay_subscription_id;
+  const expectedSignature = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "").update(body.toString()).digest("hex");
+
+  if (expectedSignature === razorpay_signature) {
+    let verifiedLimit = 2;
+    if (planName === "Pro") verifiedLimit = 4;
+    if (planName === "Elite") verifiedLimit = 7;
+    if (planName === "Alpha") verifiedLimit = 12;
+
+    try {
+      await prismadb.usersubscription.upsert({
+        where: {
+          userId: userId
+        },
+        create: {
+          userId: userId,
+          maxCompanions: verifiedLimit,
+          razorpaySubscriptionId: razorpay_subscription_id,
+          razorpayPlanId: planName,
+          razorpayCurrentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        },
+        update: {
+          maxCompanions: verifiedLimit,
+          razorpaySubscriptionId: razorpay_subscription_id,
+          razorpayPlanId: planName,
+          razorpayCurrentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        }
+      });
+      res.json({ success: true, verifiedLimit });
+    } catch (error) {
+      console.error("Subscription update error:", error);
+      res.status(500).json({ msg: "Database update failed" });
+    }
+  } else {
+    res.status(400).json({ msg: "Invalid signature" });
+  }
+})
+
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
