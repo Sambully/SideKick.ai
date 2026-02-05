@@ -6,7 +6,13 @@ import { CallbackManager } from "@langchain/core/callbacks/manager";
 import { Replicate } from "@langchain/community/llms/replicate"
 import { ratelimit } from "./rate-limit";
 import { MemoryManager } from "./memory";
-import { razorpay } from "./subscriptions-part/razorpay";
+
+import Razorpay from "razorpay";
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || "",
+  key_secret: process.env.RAZORPAY_KEY_SECRET || "",
+});
 
 
 import cors from "cors";
@@ -508,7 +514,7 @@ app.post("/api/subscription/checkout", requiredAuth, async (req: Request, res: R
   const options = {
     amount: amount * 100,
     currency: "INR",
-    receipt: `reciept_${userId}_${Date.now()}`,
+    receipt: `rcpt_${Date.now().toString().slice(-10)}_${userId.slice(-5)}`,
     notes: {
       planName,
       userId,
@@ -520,15 +526,20 @@ app.post("/api/subscription/checkout", requiredAuth, async (req: Request, res: R
     const order = await razorpay.orders.create(options);
     res.json(order);
   } catch (err) {
-    console.log(err);
+    console.log("[SUBSCRIPTION_ERROR]", err);
+    res.status(500).json({ msg: "Error creating order", error: String(err) });
   }
 
 })
 
 
 app.post("/api/subscription/verify", requiredAuth, async (req: Request, res: Response) => {
-  const { razorpay_order_id, razorpay_subscription_id, razorpay_signature, planName } = req.body;
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, planName } = req.body;
   const userId = req.auth.userId;
+  const razorpay_subscription_id = razorpay_payment_id;
+
+  console.log("Verifying subscription for user:", userId);
+  console.log("Payload:", { razorpay_order_id, razorpay_payment_id, razorpay_signature, planName });
 
   if (!userId) {
     return res.status(401).json({ msg: "Unauthorized" });
@@ -537,6 +548,8 @@ app.post("/api/subscription/verify", requiredAuth, async (req: Request, res: Res
   const body = razorpay_order_id + "|" + razorpay_subscription_id;
   const expectedSignature = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "").update(body.toString()).digest("hex");
 
+  console.log("Signatures:", { expected: expectedSignature, received: razorpay_signature });
+
   if (expectedSignature === razorpay_signature) {
     let verifiedLimit = 2;
     if (planName === "Pro") verifiedLimit = 4;
@@ -544,7 +557,7 @@ app.post("/api/subscription/verify", requiredAuth, async (req: Request, res: Res
     if (planName === "Alpha") verifiedLimit = 12;
 
     try {
-      await prismadb.usersubscription.upsert({
+      const sub = await prismadb.usersubscription.upsert({
         where: {
           userId: userId
         },
@@ -552,22 +565,26 @@ app.post("/api/subscription/verify", requiredAuth, async (req: Request, res: Res
           userId: userId,
           maxCompanions: verifiedLimit,
           razorpaySubscriptionId: razorpay_subscription_id,
+          razorpayCustomerId: razorpay_payment_id, // Storing payment ID as customer ID for reference
           razorpayPlanId: planName,
           razorpayCurrentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         },
         update: {
           maxCompanions: verifiedLimit,
           razorpaySubscriptionId: razorpay_subscription_id,
+          razorpayCustomerId: razorpay_payment_id,
           razorpayPlanId: planName,
           razorpayCurrentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         }
       });
+      console.log("Subscription updated in DB:", sub);
       res.json({ success: true, verifiedLimit });
     } catch (error) {
       console.error("Subscription update error:", error);
-      res.status(500).json({ msg: "Database update failed" });
+      res.status(500).json({ msg: "Database update failed", error: String(error) });
     }
   } else {
+    console.warn("Invalid signature");
     res.status(400).json({ msg: "Invalid signature" });
   }
 })
@@ -591,8 +608,17 @@ app.get("/api/settings", requiredAuth, async (req: Request, res: Response) => {
     const count = await prismadb.companion.count({
       where: { userId: userId }
     })
+    console.log("Settings fetch:", { userId, subscription, count });
+
     const DAY_IN_MS = 86_400_000;
     const isPro = !!subscription?.razorpayCurrentPeriodEnd && (subscription.razorpayCurrentPeriodEnd.getTime() + DAY_IN_MS > Date.now());
+
+    console.log("isPro check:", {
+      currentPeriodEnd: subscription?.razorpayCurrentPeriodEnd,
+      now: new Date(),
+      isPro
+    });
+
     return res.json({
       isPro,
       planName: isPro ? subscription?.razorpayPlanId : "Free",

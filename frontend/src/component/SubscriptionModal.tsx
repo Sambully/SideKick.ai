@@ -32,7 +32,7 @@ export const SubscriptionContent = ({ isModal = false }: { isModal?: boolean }) 
             setloading(true);
             const token = await getToken();
             const { data: order } = await axios.post("http://localhost:3000/api/subscription/checkout",
-                { planeName: plan.name, amount: plan.price },
+                { planName: plan.name, amount: plan.price },
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -40,18 +40,19 @@ export const SubscriptionContent = ({ isModal = false }: { isModal?: boolean }) 
                 }
             )
             const options = {
-                key: process.env.RAZORPAY_KEY_ID,
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: order.amount,
                 currency: "INR",
                 name: `SideKick ${plan.name}`,
                 description: plan.desc,
                 order_id: order.id,
                 handler: async function (response: any) {
-                    await axios.post("http:/?localhost:3000/api/subscription/verify", {
-                        razorpay_subscription_id: response.razorpay_subscription_id,
+                    await axios.post("http://localhost:3000/api/subscription/verify", {
+                        razorpay_payment_id: response.razorpay_payment_id,
                         razorpay_order_id: response.razorpay_order_id,
                         razorpay_signature: response.razorpay_signature,
-                        planName: plan.name,
+                        planName: plan.name
+                    }, {
                         headers: {
                             Authorization: `Bearer ${token}`
                         }
@@ -61,11 +62,14 @@ export const SubscriptionContent = ({ isModal = false }: { isModal?: boolean }) 
                 },
                 theme: { color: "#4f46e5" }
             };
+            console.log("Razorpay Options:", options);
             // @ts-ignore
             const rzp = new window.Razorpay(options);
             rzp.open();
         } catch (err) {
-            toast.error("Something went wrong");
+            console.error("Subscription Error:", err);
+            // @ts-ignore
+            toast.error("Something went wrong", { description: err.response?.data?.msg || err.message || "Unknown error" });
         } finally {
             setloading(false);
         }

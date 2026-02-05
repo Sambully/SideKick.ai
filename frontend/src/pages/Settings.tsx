@@ -5,13 +5,20 @@ import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { SubscriptionModal } from "@/component/SubscriptionModal";
+import { useAuth } from "@clerk/clerk-react";
+
 export function Settings() {
+    const { getToken } = useAuth();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState({ isPro: false, limit: 2, count: 0, planName: "" });
     const [showModal, setShowModal] = useState(false);
     useEffect(() => {
         const fetch = async () => {
-            const res = await axios.get("http://localhost:3000/api/settings");
+            const token = await getToken();
+            const res = await axios.get("http://localhost:3000/api/settings", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            console.log("Settings API Response:", res.data);
             setData(res.data);
             setLoading(false);
         }
@@ -67,6 +74,8 @@ export function Settings() {
                 </div>
 
                 <SubscriptionModal isOpen={showModal} isClosed={() => setShowModal(false)} />
+
+
             </div>
         </div>
     </div>
