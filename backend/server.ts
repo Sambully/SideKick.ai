@@ -128,12 +128,13 @@ app.patch(`/companion/:id`, requiredAuth, async (req: Request, res: Response) =>
       msg: "Companion id is required"
     })
   }
-  const { src, name, description, instructions, seed, categoryId, username } = body;
-  if (!src || !name || !description || !instructions || !seed || !categoryId || !username) {
+  const { src, name, description, instructions, seed, categoryId } = body;
+  if (!src || !name || !description || !instructions || !seed || !categoryId) {
     return res.json({
       mag: "Details are missing"
     })
   }
+  console.log("Updating companion:", id, "Body:", body);
   try {
     const companion = await prismadb.companion.update({
       where: {
@@ -146,14 +147,16 @@ app.patch(`/companion/:id`, requiredAuth, async (req: Request, res: Response) =>
         description,
         instructions,
         seed,
-        categoryId,
-        username
+        categoryId
       }
-    })
+    });
+    console.log("Companion updated:", companion);
+    return res.json(companion);
   } catch (err) {
     console.log("Error in updating companion", err);
-    return res.json({
-      msg: "Something went wrong"
+    return res.status(500).json({
+      msg: "Something went wrong",
+      error: String(err)
     })
   }
 })

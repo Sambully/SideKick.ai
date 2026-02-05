@@ -26,6 +26,7 @@ const Companion = ({ params }: Companionprop) => {
             } catch (err) {
                 console.error("Error while fetching catogries : ", err);
             }
+            if (params.companionId === "new") return;
             try {
                 const response = await axios.get(`http://localhost:3000/companion/${params.companionId}`);
                 setcompanion(response.data);

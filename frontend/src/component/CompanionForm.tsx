@@ -93,8 +93,8 @@ const CompanionForm = ({ initialData, categories }: CompanionFormProps) => {
             navigation("/Dashboard");
         } catch (err) {
             console.error("Submit Error:", err);
-            toast("Unauthorized user", {
-                description: "Please log in"
+            toast.error("Something went wrong", {
+                description: "Please check your inputs and try again"
             })
         }
     }
@@ -227,7 +227,7 @@ const CompanionForm = ({ initialData, categories }: CompanionFormProps) => {
                     )} />
                 <div className="w-full flex pt-3 justify-center">
                     <Button size="lg" disabled={isloading}>
-                        {initialData ? " Edit your companion" : "Add your companion"}
+                        {initialData ? " Update your companion" : "Create your companion"}
                         <Wand></Wand>
                     </Button>
 
